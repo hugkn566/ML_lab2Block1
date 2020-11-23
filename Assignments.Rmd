@@ -1,0 +1,38 @@
+---
+  title: "Lab Topic 2 Block 1 Machine Learning"
+author: "Hugo Knape & Zahra Jalil Pour & Niklas Larsson"
+date: "11/12/2020"
+output:
+  word_document: default
+pdf_document: default
+latex_engine: xelatex
+---
+  
+# State of contribution 
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, warning = FALSE, include = FALSE}
+library(kknn)
+library(ggplot2)
+```
+
+# Assignment 1. 
+
+
+
+## Assignment 2
+
+
+
+
+
+# Assignment 3
+
+
+# Appendix:
+
+```{r ref.label = knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
