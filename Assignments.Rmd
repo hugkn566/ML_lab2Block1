@@ -23,10 +23,231 @@ library(ggplot2)
 
 
 
-## Assignment 2
+# Assignment 2. Decision trees and Naïve Bayes for bank marketing
+
+## Task 1
+Pre-process data by removing "Duration" feature, converting all character columns to categorical classes (factors) and split into train-, validation- and testset.
+```{r}
+library(tree)
+data = read.csv2("bank-full.csv")
+data$duration = NULL
+
+character_vars = lapply(data, class) == "character"
+data[, character_vars] = lapply(data[, character_vars], as.factor)
+#str(data)
+
+
+n=dim(data)[1]
+set.seed(12345)
+id=sample(1:n, floor(n*0.4))
+train=data[id,]
+
+id1=setdiff(1:n, id)
+set.seed(12345)
+id2=sample(id1, floor(n*0.3))
+valid=data[id2,]
+
+id3=setdiff(id1,id2)
+test=data[id3,]
+
+#sum(c(dim(train)[1],dim(valid)[1], dim(test)[1])) == dim(data)[1]
+
+```
+
+## Task 2
+Fit three different models from the given settings.
+```{r}
+n = dim(train)[1]
+fit_def = tree(formula = y ~., data=train, control = tree.control(nobs = n))
+fit_node = tree(formula = y ~., data=train, control = tree.control(nobs = n, minsize = 7000))
+fit_dev = tree(formula = y ~., data=train, control = tree.control(nobs = n, mindev = 0.0005))
+
+misclass = matrix(0,3,2)
+dimnames(misclass) = list( c("Default","Node","Deviance"), c("Test","Validation") )
+
+
+pred_def_train = predict(fit_def, newdata = train, type = "class")
+pred_def_val = predict(fit_def, newdata = valid, type = "class")
+misclass[1,1] = sum(train$y != pred_def_train)/length(train$y)
+misclass[1,2] = sum(valid$y != pred_def_val)/length(valid$y)
+
+
+pred_node_train = predict(fit_node, newdata = train, type = "class")
+pred_node_val = predict(fit_node, newdata = valid, type = "class")
+misclass[2,1] = sum(train$y != pred_node_train)/length(train$y)
+misclass[2,2] = sum(valid$y != pred_node_val)/length(valid$y)
+
+
+pred_dev_train = predict(fit_dev, newdata = train, type = "class")
+pred_dev_val = predict(fit_dev, newdata = valid, type = "class")
+misclass[3,1] = sum(train$y != pred_dev_train)/length(train$y)
+misclass[3,2] = sum(valid$y != pred_dev_val)/length(valid$y)
+
+misclass
+
+```
+From this result the default/nodesize trees performs best on validation data while deviance model does the opposite.
+Judging by these result the Deviance-model would be overfitting compared to the other two which also could be seen in the graphical illustrations below.
+The deviance model do have more potential to be optimized as this tree is much larger. The default and nodesize does only differ by one node which can explain why they perform identically!
+
+Increasing the minimum node size results in a smaller tree as the data is divided in to larger areas (each area represent a terminal node) and there are less "classification squares" to decide a label between.
+
+Decreasing the deviance forces the model to split nodes more often which will result in a larger tree as seen below.
+This does introduce more risk for overfitting. The deviance is calculated by $$Deviance = -\sum_{i=1}^n p(c_i)log(p(c_i))$$ where $p(c_i)$ is the probability of class $c_i$ in the node. Using a lower value for deviance forces the probability for classification to be higher which results in more splits.
+
+```{r}
+plot(fit_def, type = "uniform")
+plot(fit_node, type = "uniform")
+plot(fit_dev, type = "uniform")
+```
+## Task 3
+
+```{r}
+
+trainScore = rep(0,50)
+testScore = rep(0,50)
+
+for(i in 2:50){
+  prunedTree = prune.tree(fit_dev, best = i)
+  pred = predict(prunedTree, newdata = valid, type = "tree" )
+  trainScore[i] = deviance(prunedTree)
+  testScore[i] = deviance(pred)
+}
+```
+
+As seen in the figure below the trees total deviance decreases rapidly during the first part as the model is able to distinguish between more features. As the number of leaves increases the training data's deviance keeps decreasing while the validation data starts to increase after around 20 leafs. This is where the optimal tree size is found.
+The reason why the training-deviance is larger than the validations is due to the training set being larger therefore more values to sum up.
+
+```{r}
+
+plot(2:50, trainScore[2:50], type = "b", col = "red", ylim = c(8000,12000), main = "Task 3", xlab = "Sequence", ylab = "Deviance")
+points(2:50, testScore[2:50], type = "b", col = "blue")
+legend("topright", c("Train","Validation"), pch = c("o","o"), col= c("red","blue"))
+
+```
+The optimal size (number of leaves/terminal nodes) is found where at the minimum deviance.
+The optimal number of leaves and the most significant features is shown in the summary of the optimal model:
+
+```{r}
+opt_leaf = which.min(testScore[2:50])
+opt_mdl = prune.tree(fit_dev, best = opt_leaf)
+summary(opt_mdl)
+```
+
+The tree structure seems to use more terminal nodes than necessary as there are a lot of nodes which leads to the same label/ typ of terminal node, could be due to the deviance setting. The number of terminal nodes are indeed the same as the optimal which where found above.
+The outcome feature seems to be the most significant as it is set as the root node. This feature indicate wherever the customer was persuaded to subscribe a term deposit, which seems like a good starting point.
+
+```{r}
+plot(opt_mdl, type = "uniform")
+text(opt_mdl)
+```
+The prediction power of this model is ok, it does get the right answer in about 9/10 cases but its' main failure is by classifying False Negatives.
+
+```{r}
+pred_valid = predict(opt_mdl, newdata = valid, type = "class")
+val_error = sum(pred_valid != valid$y)/length(valid$y)
+val_conf_matrix = table(valid$y, pred_valid)
+val_conf_matrix
+sprintf("Misclassification rate: %.4f", val_error)
+```
 
 
 
+## Task 4
+By introducing a loss matrix to penalize the False Negative predictions the misclassification rate did increase but the number of False Negative classifications decreased!
+Using a loss matrix will direct the focus of learning towards the weighting of the matrix, in this case classifying False Negatives gives a five time larger penalty than False Positive and this will affect the overall classification which is why error rate increased.
+
+Using the loss matrix does give a good result as the previous model have been trained on both the training and validation set while this model only have been exposed to the training set, suggesting that it learn faster (but more knowledge about the data is required to set up the loss matrix).
+
+
+```{r}
+library(rpart)
+
+lossMatrix = matrix(c(0,5,1,0),2,2)
+
+fit_matrix = rpart(formula = y~., data = train, parms = list(loss = lossMatrix))
+pred_matrix = predict(fit_matrix, newdata = test, type = "class")
+error = sum(pred_matrix != test$y)/length(test$y)
+cm_matrix = table(test$y, pred_matrix)
+cm_matrix
+sprintf("Misclassification rate: %.4f", error)
+```
+ 
+## Task 5
+
+
+As can be seen in the graph below the optimal tree model seems to be the best model as the "area under curve" (AUC) is greater than the naive's model. Comparing two models AUC could occasionally lead the wrong assumption within certain regions but in practice the AUC-measure performs well as a general comparison.
+In this case the tree models ROC curve is always above the naive's which also indicates that the tree model would perform best.
+Both models are well above the dashed line which could be interpret as a minimum boarder for a models predictive power, if a models is below this line the predictive power is worse than random guessing.
+
+```{r}
+library(e1071)
+
+fit_naive = naiveBayes(formula = y~., data = train)
+
+opt_pred = predict(opt_mdl, newdata = test, type = "vector")
+naive_pred = predict(fit_naive, newdata = test, type = "raw")
+
+thres = seq(0, 0.95, 0.05)
+TPR_tree = rep(0,length(thres))
+FPR_tree = rep(0,length(thres))
+TPR_naive = rep(0,length(thres))
+FPR_naive = rep(0,length(thres))
+y = test$y
+
+
+for(i in 1:length(thres)){
+  TP_tree = 0
+  FP_tree = 0
+  TP_naive = 0
+  FP_naive = 0
+  
+  for(j in 1:length(test$y)){
+      
+    if(opt_pred[j,2] >= thres[i]){ 
+      if(y[j] == "yes"){ 
+        TP_tree = TP_tree + 1
+        }
+      else{
+        FP_tree = FP_tree + 1
+        }
+      }
+    
+    if(naive_pred[j,2] >= thres[i]){ 
+      if(y[j] == "yes"){ 
+        TP_naive = TP_naive + 1 
+        }
+      else{ 
+        FP_naive = FP_naive + 1 
+        }
+    }
+      
+  }
+  TPR_tree[i] = TP_tree/sum(test$y == "yes")
+  FPR_tree[i] = FP_tree/sum(test$y == "no")
+  
+  TPR_naive[i] = TP_naive/sum(test$y == "yes")
+  FPR_naive[i] = FP_naive/sum(test$y == "no")
+}
+
+```
+
+```{r}
+
+sub_model = seq(0,1,0.01)
+AUC_tree = sum(abs(diff(FPR_tree)) * (head(TPR_tree,-1)+tail(TPR_tree,-1)))/2
+AUC_naive = sum(abs(diff(FPR_naive)) * (head(TPR_naive,-1)+tail(TPR_naive,-1)))/2
+AUC_sub = sum(abs(diff(sub_model)) * (head(sub_model,-1)+tail(sub_model,-1)))/2
+
+plot(sub_model, sub_model, col = "black", type = "l", lty = 2, main = "ROC", xlab = "False Positive Rate", ylab = "True Positive Rate")
+lines(FPR_tree, TPR_tree, col = "red", type = "o")
+lines(FPR_naive, TPR_naive, col = "blue", type = "o")
+
+leg_text = c(sprintf("Random guess  AUC: %.2f", AUC_sub),sprintf("Tree model        AUC: %.2f", AUC_tree),sprintf("Naive model     AUC: %.2f", AUC_naive))
+
+legend("bottomright", legend = leg_text, pch = c("-","o","o"), col = c("black", "red", "blue"))
+
+```
 
 
 # Assignment 3
