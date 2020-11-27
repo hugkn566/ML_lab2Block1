@@ -1,9 +1,9 @@
 ---
-  title: "Lab Topic 2 Block 1 Machine Learning"
+title: "Lab Topic 2 Block 1 Machine Learning"
 author: "Hugo Knape & Zahra Jalil Pour & Niklas Larsson"
 date: "11/12/2020"
 output:
-  word_document: default
+word_document: default
 pdf_document: default
 latex_engine: xelatex
 ---
@@ -232,7 +232,7 @@ for(i in 1:length(thres)){
 
 ```
 
-```{r}
+```{r, ECHO = FALSE}
 
 sub_model = seq(0,1,0.01)
 AUC_tree = sum(abs(diff(FPR_tree)) * (head(TPR_tree,-1)+tail(TPR_tree,-1)))/2
