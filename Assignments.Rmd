@@ -176,7 +176,7 @@ sprintf("Misclassification rate: %.4f", error)
 ## Task 5
 
 
-As can be seen in the graph below the optimal tree model seems to be the best model as the "area under curve" (AUC) is greater than the naive's model. Comparing two models AUC could occasionally lead the wrong assumption within certain regions but in practice the AUC-measure performs well as a general comparison.
+As can be seen in the graph below the optimal tree model seems to be the best model as the "area under curve" (AUC) is greater than the naive's model. Comparing two models AUC could occasionally lead the wrong assumption within certain regions but in practice the AUC-measure performs well as a general comparison. The AUC is calculated using the trapezoidal rule.
 In this case the tree models ROC curve is always above the naive's which also indicates that the tree model would perform best.
 Both models are well above the dashed line which could be interpret as a minimum boarder for a models predictive power, if a models is below this line the predictive power is worse than random guessing.
 
