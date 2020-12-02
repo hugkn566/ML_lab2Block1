@@ -250,7 +250,112 @@ legend("bottomright", legend = leg_text, pch = c("-","o","o"), col = c("black", 
 ```
 
 
-# Assignment 3
+# Assignment 3: Principal components for crime level analysis.
+
+## Task 1
+
+```{r}
+communties <- read.csv("communities.csv")
+communties <- communties[, -communties$ViolentCrimesPerPop]
+#1
+df <- (scale(communties))
+s <- cov(df)
+s.eigen <- eigen(s)
+save <- c()
+for (v in s.eigen$values) {
+  h<- (v / sum(s.eigen$values))
+  save <- c(save, h)
+  }
+save[1]+save[2]
+
+nintyfive <- 0
+i <- 1
+while (nintyfive < 0.95) {
+ nintyfive <-  save[i] + nintyfive
+ i <- i + 1
+}
+i-1
+```
+
+The first to components explains around 42 percent of the variation. 
+It needs 35 features to obtain at least 95% of variance in the data.
+
+## Task 2
+
+```{r}
+#PRINCOMP
+res <- princomp(df)
+lambda <- res$sdev^2
+#Plot
+U <- res$loadings
+x <- res$scores
+
+plot(U[,1], main="Scoreplot, PC1")
+```
+
+The Scoreplot over PC1 shows that it seems around 15 features has a higher absolute value then 0.15 which means that they have a notable contribution to the first component. 
+
+
+The 5 features that has the biggest contribution to the first component are shown in the table down. We can see that many of they features has to do with Income and family which is a very logical relationship to crime level 
+
+```{r}
+#Absolute values
+features <- as.data.frame(U[,1])
+features$variable <- rownames(features) 
+features$`U[, 1]` <- abs(features$`U[, 1]`)
+newdata <- features[order(features[,1],decreasing = TRUE ),]
+newdata[1:5, ]
+```
+The 5 features that has the biggest contribution to the first component are shown in the table above. We can see that many of they features has to do with Income and family which is a very logical relationship to crime level 
+
+```{r}
+#pc1 AGAINST PC2
+
+pc12 <- as.data.frame(x[,1:2])
+pc12$crimes <- communties$ViolentCrimesPerPop
+library(ggplot2)
+p1 <- ggplot(data = pc12, aes(x=Comp.1, y=Comp.2, color=crimes))+
+  geom_point() +
+  theme_bw() +
+  labs(title = "PC1 vs PC2"  , x = "PC1" , y = "PC2", colour = "ViolentCrimesPerPop")  +
+  theme(axis.title.y = element_text(vjust = 0.5, size = 13 , face = "bold")) +
+  theme(axis.title.x = element_text(vjust = 0.5 ,size = 13 , face = "bold")) +
+  theme(plot.title = element_text(size = 14, face = "bold" , hjust = 0.4 )) +
+  theme(axis.text.y = element_text(size = 11)) + 
+  theme(axis.text.x = element_text(size = 11)) 
+p1
+```
+
+The plot above shows the PC1 versus PC2 with color of Violentcrimesperpop. The picture shows that the PC1 is pretty good to separate low and high values on violentcrimesperpop. It's hard to see any pattern between PC1 and PC2.
+
+## Task 3
+
+```{r}
+model <- lm(crimes ~ poly(Comp.1,2), data = pc12)
+pc12$pred <- (model$fitted.values)
+
+ggplot(pc12, aes(x=Comp.1, y = crimes)) +
+  geom_point(color= "orange")  + theme_bw() +
+  geom_line(aes(y=pred, lwd=1)) +
+    labs(title = "PC1 vs Crimes"  , x = "PC1" , y = "Crimes")  +
+  theme(axis.title.y = element_text(vjust = 0.5, size = 13 , face = "bold")) +
+  theme(axis.title.x = element_text(vjust = 0.5 ,size = 13 , face = "bold")) +
+  theme(plot.title = element_text(size = 14, face = "bold" , hjust = 0.4 )) +
+  theme(axis.text.y = element_text(size = 11)) + 
+  theme(axis.text.x = element_text(size = 11)) 
+```
+
+
+
+
+
+
+
+
+The plot above shows the violentcrimesperpop versus PC1 with the fitted values from the model above as the black line. The graph shows that the model seems to capture the connection between the target and the feature pretty good. 
+
+## Task 4
+
 
 
 # Appendix:
