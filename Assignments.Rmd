@@ -9,6 +9,10 @@ latex_engine: xelatex
 ---
   
 # State of contribution 
+
+### Assignment1: 
+### Assignment2: Niklas Larsson
+### Assignment3: 
   
   ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
