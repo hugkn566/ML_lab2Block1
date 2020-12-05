@@ -9,6 +9,10 @@ latex_engine: xelatex
 ---
   
 # State of contribution 
+
+### Assignment1: 
+### Assignment2: Niklas Larsson
+### Assignment3: 
   
   ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -17,6 +21,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, warning = FALSE, include = FALSE}
 library(kknn)
 library(ggplot2)
+library(e1071)
+library(tree)
+library(rpart)
 ```
 
 # Assignment 1. 
@@ -28,7 +35,7 @@ library(ggplot2)
 ## Task 1
 Pre-process data by removing "Duration" feature, converting all character columns to categorical classes (factors) and split into train-, validation- and testset.
 ```{r}
-library(tree)
+
 data = read.csv2("bank-full.csv")
 data$duration = NULL
 
@@ -161,7 +168,7 @@ Using the loss matrix does give a good result as the previous model have been tr
 
 
 ```{r}
-library(rpart)
+
 
 lossMatrix = matrix(c(0,5,1,0),2,2)
 
@@ -181,7 +188,7 @@ In this case the tree models ROC curve is always above the naive's which also in
 Both models are well above the dashed line which could be interpret as a minimum boarder for a models predictive power, if a models is below this line the predictive power is worse than random guessing.
 
 ```{r}
-library(e1071)
+
 
 fit_naive = naiveBayes(formula = y~., data = train)
 
