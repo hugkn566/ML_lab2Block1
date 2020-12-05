@@ -345,18 +345,50 @@ ggplot(pc12, aes(x=Comp.1, y = crimes)) +
   theme(axis.text.x = element_text(size = 11)) 
 ```
 
-
-
-
-
-
-
-
 The plot above shows the violentcrimesperpop versus PC1 with the fitted values from the model above as the black line. The graph shows that the model seems to capture the connection between the target and the feature pretty good. 
 
 ## Task 4
 
+```{r}
 
+library(boot)
+data <- pc12
+data2 <- data[order(data$Comp.1),]
+mle <- lm(crimes ~ poly(Comp.1,2), data = data2)
+f1 <- function(data1){
+  res <- lm(crimes ~ poly(Comp.1,2), data = data1)
+  crimesP <- predict(res, newdata = data2 )
+  n <- length(data2$crimes)
+  predictedP <- rnorm(n, crimesP, sd(mle$residuals))
+  return(predictedP)
+}
+
+
+rng <- function(data, mle ){
+  data1 <- data.frame(crimes=data$crimes, Comp.1=data$Comp.1)
+  n <- length(data$crimes)
+  data1$Crimes <- rnorm(n, predict(mle, newdata = data1), sd(mle$residuals))
+  return(data1)
+}
+
+
+
+res <- boot(data2, statistic=f1, R=10000,
+         mle=mle,ran.gen=rng, sim="parametric")
+
+e <- envelope(res) #compute prediction bands
+fit <- lm(crimes ~ poly(Comp.1,2), data = data2)
+crimesP=predict(fit)
+plot(data$Comp.1,data$crimes , pch=21, bg="orange", ylim=c(-0.3,1.1))
+points(data2$Comp.1,crimesP,type="l") #plot fitted line
+#plot prediction bands
+points(data2$Comp.1,e$point[2,], type="l", col="blue")
+points(data2$Comp.1,e$point[1,], type="l", col="blue")
+```
+
+
+
+The plot above shows the plot from task 3 but now with prediction intervals. You can see that the predictions bands have almost the same width all over the plot and that the intervals alot of the points in the plot. This is because prediction is made out of every fitted point instead of confidence interval which is made out of the fitted line. 
 
 # Appendix:
 
