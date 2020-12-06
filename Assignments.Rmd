@@ -3,8 +3,9 @@ title: "Lab Topic 2 Block 1 Machine Learning"
 author: "Hugo Knape & Zahra Jalil Pour & Niklas Larsson"
 date: "11/12/2020"
 output:
-word_document: default
-pdf_document: default
+  word_document: default
+  pdf_document: default
+  '': default
 latex_engine: xelatex
 ---
   
@@ -625,12 +626,14 @@ f1=function(data1){
   res=lm(crimes~poly(Comp.1,degree=2),data1)
   ViolentCrimesPerPopP=predict(res,newdata=data2)
   return(ViolentCrimesPerPopP)}
-res2 <- boot(data2, statistic=f1, R=3000, mle = fit,ran.gen=rng  , sim="parametric")
-e2 <- envelope(res2)
-
 
 fit <- lm(crimes ~ poly(Comp.1,2), data = data2)
 crimesP=predict(fit)
+
+res2 <- boot(data2, statistic=f1, R=3000, mle = fit, ran.gen=rng  , sim="parametric")
+e2 <- envelope(res2)
+
+
 plot(data$Comp.1,data$crimes , pch=21, bg="orange", ylim=c(-0.3,1.1), main = "Confidence interval")
 points(data2$Comp.1,crimesP,type="l") #plot fitted line
 #plot confidence bands
