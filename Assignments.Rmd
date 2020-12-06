@@ -10,9 +10,9 @@ latex_engine: xelatex
   
 # State of contribution 
 
-### Assignment1: 
+### Assignment1: Zahra Jalilpour
 ### Assignment2: Niklas Larsson
-### Assignment3: 
+### Assignment3: Hugo Knap
   
   ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -27,7 +27,259 @@ library(rpart)
 ```
 
 # Assignment 1. 
+---
+title: "Untitled"
+author: "z"
+date: '2020-11-20'
+output:
+  html_document: default
+  pdf_document: default
+  latex_engine: xelatex
+---
 
+
+
+```{r, warning = FALSE, include = FALSE}
+library(ggplot2)
+library(datasets)
+
+```
+# Assignment 1: LDA and logistic regression
+
+
+In LDA , features in each class has multivariate normal distribution and common variance $ \Sigma$. The covariance matrix is the same in all class  $Cov(X) = \Sigma$. Random variable $X$ is a vector $X=(X_{1}, X_{2},...,X_{p})$
+Mean of each class is :
+$$\hat\mu_k = \frac{1}{\#\{i\;;\;y_i=k\}}\sum_{i\;;\; y_i=k} x_i$$
+Perior probabity or $ \ pi_k$ is equal to: 
+$$ \hat \pi_k = \frac{\{i\;;\;y_i=k\}}{n}$$
+$X$ follows multivariate Gaussian distribution.
+
+
+## Task 1
+
+### Make a scatterplot
+```{r}
+ggplot(iris, aes(x=Sepal.Width , y= Sepal.Length, shape= Species, color=Species)) + geom_point() +stat_ellipse()
+
+```
+Here we can see that we have more than two classes. Then LDA is the preferred linear classification technique, and LDA is a simple model for preparation and application. Here we can not use logistic regression, because we have more than two classes. Although we can use multi logistic regression but is rarely used for this purpose. LDA is a stable model when the classes are separated well. Also LDA generally is used for small data sets. 
+
+## Task 2
+
+### 2-a
+Compute mean, covariance matrix and prior probabilities for each class: 
+
+
+```{r,warning=FALSE, message=FALSE,echo=F }
+data(iris)
+### covariance matrix per each class
+paste("Covariance matrix in Setosa class")
+(var(subset(iris,subset=Species=='setosa',select=c(1:2))) -> S1)
+paste("Covariance matrix in Versicolor class")
+(var(subset(iris,subset=Species=='versicolor',select=c(1:2))) -> S2)
+paste("Covariance matrix in Virginica class")
+(var(subset(iris,subset=Species=='virginica',select=c(1:2))) -> S3)
+
+
+### mean per each class
+
+m1 <- colMeans(subset(iris,subset=Species=='setosa',select=c(1:2))) 
+
+m2 <- colMeans(subset(iris,subset=Species=='versicolor',select=c(1:2))) 
+
+m3 <- colMeans(subset(iris,subset=Species=='virginica',select=c(1:2)))
+
+paste("mean for each class")
+results <- cbind(m1,m2,m3)
+colnames(results) <- c("setosa","versicolor","virginica")
+rownames(results) <- c("Sepal.Length", "Sepal.Width")
+results
+
+
+### prior probability per each class
+paste("prior probability for each class: ")
+(nrow(subset(iris,subset=Species=='setosa')) / nrow(iris) -> prio_prob1)
+(nrow(subset(iris,subset=Species=='versicolor')) / nrow(iris) -> prio_prob2)
+(nrow(subset(iris,subset=Species=='virginica')) / nrow(iris) -> prio_prob3)
+
+```
+### 2-b
+pooled covariance matrix:
+```{r,warning=FALSE, message=FALSE,echo=F}
+paste("degree of freedom: ")
+(table(iris$Species)-1 -> dof)
+
+
+paste("pooled covariance matrix: ")
+((dof[1]*S1+dof[2]*S2+dof[3]*S3)/sum(dof) -> S)
+```
+### 2-c
+probabilistic model: 
+The probability of $p(X = x | Y = k)$ is given by:
+$$f_k(x) = \frac{1}{(2 \pi)^{p/2} |\Sigma|^{1/2}} \
+exp \left( - \frac{1}{2} (x - \mu_k)^T \Sigma^{-1} (x - \mu_k) \right)$$
+By considering prior probability is $P(Y = k) = \pi_k$ , and taking logarithm , we will find Linear discriminant function or Linear score function:
+
+
+
+$$\delta_k(x)=x^T\Sigma^{-1}\mu_k-\frac{1}{2}\mu_{k}^{T}\Sigma^{-1}\mu_{k} + log(\pi_k)$$
+$$\hat{G}(x)= \text{ arg }\underset{k}{max}\delta_k(x)$$
+
+The decision boundary is the set of points in which two classes are equally probable:
+$$\delta_k(x) = \delta_l(x)$$
+
+
+
+We consider $ \pi_k, \ \mu_k, \ \Sigma$ by MLE as below:
+$$\hat \Sigma = \frac{1}{m} \sum_{i=1}^m (x^{(i)} - \mu_{y^{(i)}})(x^{(i)} - \mu_{y^{(i)}})^T$$
+$$ \hat \pi_k = \frac{\{i\;;\;y_i=k\}}{n}$$
+```{r,warning=FALSE, message=FALSE,echo=F}
+multi_gusi_model <- function(x,mean,sigma){
+  p <- ncol(x)
+  sig_inv <- solve(sigma)
+  state1 <- (sqrt((2*pi)^p) *(det(sigma)))
+  state2 <- -(1/2)*(as.matrix(x-mean) %*% solve(sigma) %*% t(x-mean) )
+  model <- (1/state1) * exp(state2)
+  return(model)
+}
+
+```
+
+
+### 2_d
+Compute discriminant functions for each class:
+```{r,warning=FALSE, message=FALSE,echo=F}
+discriminant <- function(x,mean_i, pooled_cov, prior_i){
+  #mu <- as.matrix(mean_i)
+  #browser()
+  state1 <- as.matrix(x) %*% solve(pooled_cov) %*% mean_i
+  state2 <- 0.5 * t(mean_i) %*% solve(pooled_cov) %*% mean_i
+  d <- state1 - as.numeric(state2) + as.numeric(log(prior_i))
+  return(d)
+}
+#example for one class
+#pooled <- ((dof[1]*S1+dof[2]*S2+dof[3]*S3)/sum(dof) -> S)
+prior <- (nrow(subset(iris,subset=Species=='setosa')) / nrow(iris) -> prio_prob1)
+d1 <-discriminant(iris[c(1,2)] ,matrix(m1,ncol = 1),S,prio_prob1)
+
+d2 <-discriminant(iris[c(1,2)] ,matrix(m2,ncol = 1),S,prio_prob2)
+
+d3 <-discriminant(iris[c(1,2)] ,matrix(m3,ncol = 1),S,prio_prob3)
+
+D_mat <- cbind(d1,d2,d3)
+colnames(D_mat) <- c("setosa","versicolor","virginica")
+paste("Discriminant matrix for three different species" )
+D_mat
+```
+### 2-e
+Compute equation of decision boundaries between classes:
+
+```{r,warning=FALSE, message=FALSE,echo=F}
+w0 <- function(pi_k, pi_l, mu_k, mu_l, pooled_cov){
+  m1 <- as.matrix(m1)
+  m2 <- as.matrix(m2)
+  w0 <- -(1/2)*t(mu_k + mu_l) %*% solve(pooled_cov) %*% (mu_k - mu_l)
+  return(w0)
+}
+w1 <-function(pi_k, pi_l, mu_k, mu_l, pooled_cov){
+  m1 <- as.matrix(m1)
+  m2 <- as.matrix(m2)
+  w1 <-  solve(pooled_cov) %*% (mu_k - mu_l)
+  return(as.matrix(w1))
+} 
+msg1 <- paste("decision boundary for Setosa ~ Versicolor\n\n")
+msg2 <- paste(msg1, "W1 : ")
+noquote(strsplit(msg2, "\n")[[1]])
+w1(0.33,0.33,m1,m2,S)
+paste("W0 : ", w0(0.33,0.33,m1,m2,S))
+
+msg1 <- paste("decision boundary for Versicolor ~ Verginica\n\n")
+msg2 <- paste(msg1, "W1 : ")
+noquote(strsplit(msg2, "\n")[[1]])
+w1(0.33,0.33,m2,m3,S)
+paste("W0 : ",w0(0.33,0.33,m2,m3,S))
+
+msg1 <- paste("decision boundary for Verginica ~ Setosa\n\n")
+msg2 <- paste(msg1, "W1 : ")
+noquote(strsplit(msg2, "\n")[[1]])
+w1(0.33,0.33,m3,m1,S)
+paste("W0 :  ", w0(0.33,0.33,m3,m1,S))
+```
+
+### 3-a
+predict function:
+```{r}
+library(ggplot2)
+D <- cbind(d1,d2,d3)
+
+for(i in row(D)){
+  predict <-apply(X = D[,], MARGIN = 1, FUN = which.max)
+}
+new_df <- iris
+new_df <- cbind(new_df, predict)
+new_df$predict[new_df$predict == "1"] <- "setosa"
+new_df$predict[new_df$predict == "2"] <- "versicolor"
+new_df$predict[new_df$predict == "3"] <- "virginica"
+ggplot(new_df, aes(x=Sepal.Length , y= Sepal.Width, shape= predict, color=predict)) + geom_point()+stat_ellipse()
+
+Actual<- iris$Species
+t_3 <-table(Actual, new_df$predict)
+knitr::kable(t_3, caption = "MissClassification matrix for manual prediction")
+lda_error_3 = 1- sum(diag(t_3))/sum(t_3)
+paste("MSE for manual LDA: " ,lda_error_3)
+```
+
+
+### 3_b  
+lda function
+```{r}
+library(MASS)
+new_data3c <- iris
+fitted_lda <- lda(Species~Sepal.Length + Sepal.Width, data = new_data3c)
+fitted_lda
+#### Confusion Matrix###
+Classification <- predict(fitted_lda, data = new_data3c)$class
+Actual<- iris$Species
+t <-table(Actual, Classification)
+knitr::kable(t,caption = "MissClassification matrix for LDA")
+lda_error = 1- sum(diag(t))/sum(t)
+paste("MSE of LDA model: ", lda_error)
+```
+```{r}
+
+```
+
+Miss classification matrix and Accuracy in both model are same.
+```{r,warning=FALSE}
+library("mvtnorm")
+bvn1 <- as.data.frame(mvrnorm(50, mu =m1, S ))
+bvn2 <- as.data.frame(mvrnorm(50, mu=m2, S))
+bvn3 <- as.data.frame(mvrnorm(50, mu=m3, S))
+bv <- rbind(bvn1,bvn2,bvn3)
+
+ggplot() +
+  geom_point(data=bv, aes(bv$Sepal.Length, bv$Sepal.Width, color=iris$Species))
+```
+By using new generate data, we can see the Setosa species is classified better than two classes, like other models.
+### 5 
+Logistic Regression
+```{r,warning=FALSE}
+library(nnet)
+multi_model <- multinom(Species~Sepal.Length + Sepal.Width, data =iris)
+multi_model
+new_data <- iris
+new_data$predicted<- predict(multi_model, new_data, type="class")
+summary(new_data)
+t_multi <- table(new_data$Species, new_data$predicted)
+t_multi
+ME_error <- 1-sum(diag(t_multi))/sum(t_multi)
+paste( "ME_error= ", ME_error)
+
+
+ggplot(new_data, aes(x=Sepal.Width , y= Sepal.Length, shape= predicted, color=predicted)) + geom_point() +stat_ellipse()
+
+```
+We can see here that ME in logistic regression model is lower than two other models.
 
 
 # Assignment 2. Decision trees and Naïve Bayes for bank marketing
